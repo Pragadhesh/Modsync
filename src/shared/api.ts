@@ -35,6 +35,8 @@ export type ActivityEntry = {
 export type InitResponse = {
   type: 'init';
   username: string;
+  isMod: boolean;
+  mods: string[];
   cases: Case[];
   activity: ActivityEntry[];
 };

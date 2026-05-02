@@ -57,6 +57,16 @@ const genId = () =>
 
 export const api = new Hono();
 
+const getModeratorNames = async (subredditName: string): Promise<string[]> => {
+  try {
+    const listing = await reddit.getModerators({ subredditName });
+    const users = await listing.all();
+    return users.map((u) => u.username);
+  } catch {
+    return [];
+  }
+};
+
 api.get('/init', async (c) => {
   if (!context.postId) {
     return c.json<ErrorResponse>({ type: 'error', message: 'No postId in context' }, 400);
@@ -66,9 +76,18 @@ api.get('/init', async (c) => {
     getCases(),
     getActivity(),
   ]);
+  const actor = username ?? 'anonymous';
+
+  const subredditName = context.subredditName ?? '';
+  const mods = subredditName ? await getModeratorNames(subredditName) : [];
+  // Fail open: if mods list is empty (e.g. dev environment), allow access
+  const isMod = mods.length === 0 || mods.includes(actor);
+
   return c.json<InitResponse>({
     type: 'init',
-    username: username ?? 'anonymous',
+    username: actor,
+    isMod,
+    mods,
     cases,
     activity,
   });

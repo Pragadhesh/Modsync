@@ -61,6 +61,22 @@ export const App = () => {
     );
   }
 
+  if (!board.isMod) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-950">
+        <div className="text-center space-y-2">
+          <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto">
+            <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H10m2-5V9m0 0V7m0 2h2m-2 0H10M4 6h16M4 6a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2M4 6V5a2 2 0 012-2h12a2 2 0 012 2v1" />
+            </svg>
+          </div>
+          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Moderators only</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">This tool is restricted to subreddit moderators.</p>
+        </div>
+      </div>
+    );
+  }
+
   const weekCases = board.cases.filter((c) => c.sprintWeek === currentWeek);
   const visibleCases =
     assigneeFilter === null
@@ -237,6 +253,7 @@ export const App = () => {
         <CaseDetailModal
           case={liveCase}
           username={board.username}
+          mods={board.mods}
           onUpdate={board.updateCase}
           onAddNote={board.addNote}
           onDelete={board.deleteCase}
@@ -246,6 +263,7 @@ export const App = () => {
       {addingCase && board.username && (
         <NewCaseModal
           username={board.username}
+          mods={board.mods}
           onSubmit={board.createCase}
           onClose={() => setAddingCase(false)}
         />

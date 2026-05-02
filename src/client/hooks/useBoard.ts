@@ -10,6 +10,8 @@ import type {
 
 type BoardState = {
   username: string | null;
+  isMod: boolean;
+  mods: string[];
   cases: Case[];
   activity: ActivityEntry[];
   loading: boolean;
@@ -29,6 +31,8 @@ const post = async (url: string, body: object): Promise<CasesResponse> => {
 export const useBoard = () => {
   const [state, setState] = useState<BoardState>({
     username: null,
+    isMod: true,
+    mods: [],
     cases: [],
     activity: [],
     loading: true,
@@ -41,7 +45,7 @@ export const useBoard = () => {
         const res = await fetch('/api/init');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = (await res.json()) as InitResponse;
-        setState({ username: data.username, cases: data.cases, activity: data.activity, loading: false, error: null });
+        setState({ username: data.username, isMod: data.isMod, mods: data.mods, cases: data.cases, activity: data.activity, loading: false, error: null });
       } catch {
         setState((prev) => ({ ...prev, loading: false, error: 'Failed to load board' }));
       }

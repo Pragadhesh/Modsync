@@ -5,18 +5,25 @@ const ESTIMATE_PRESETS = ['30m', '1h', '2h', '4h', '1d', '3d'];
 
 type Props = {
   username: string;
+  mods: string[];
   onSubmit: (title: string, description: string, flags: CaseFlag[], assignedTo: string | null, estimate: string | null) => Promise<void>;
   onClose: () => void;
 };
 
-export const NewCaseModal = ({ username, onSubmit, onClose }: Props) => {
+export const NewCaseModal = ({ username, mods, onSubmit, onClose }: Props) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [flags, setFlags] = useState<CaseFlag[]>([]);
-  const [assignedTo, setAssignedTo] = useState<string | null>(username);
+  const [assignedTo, setAssignedTo] = useState<string>(username);
   const [estimate, setEstimate] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  // Deduplicate: current user first, then other mods alphabetically
+  const modOptions = [
+    username,
+    ...mods.filter((m) => m !== username).sort(),
+  ];
 
   const toggleFlag = (flag: CaseFlag) => {
     setFlags((prev) =>
@@ -32,7 +39,7 @@ export const NewCaseModal = ({ username, onSubmit, onClose }: Props) => {
     setSaving(true);
     setError('');
     try {
-      await onSubmit(title.trim(), description.trim(), flags, assignedTo?.trim() || null, estimate.trim() || null);
+      await onSubmit(title.trim(), description.trim(), flags, assignedTo || null, estimate.trim() || null);
       onClose();
     } catch {
       setError('Failed to create case');
@@ -71,45 +78,23 @@ export const NewCaseModal = ({ username, onSubmit, onClose }: Props) => {
             />
           </div>
 
-          {/* Assignee */}
+          {/* Assignee dropdown */}
           <div>
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5 block">
               Assignee
             </label>
-            {assignedTo !== null ? (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">u/</span>
-                <input
-                  className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-indigo-400 transition-colors"
-                  placeholder="username"
-                  value={assignedTo}
-                  onChange={(e) => setAssignedTo(e.target.value)}
-                />
-                <button
-                  type="button"
-                  onClick={() => setAssignedTo(null)}
-                  className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0 whitespace-nowrap"
-                >
-                  Unassign
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
-                <span className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </span>
-                <span className="text-sm text-gray-400 dark:text-gray-500 flex-1">Unassigned</span>
-                <button
-                  type="button"
-                  onClick={() => setAssignedTo(username)}
-                  className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex-shrink-0"
-                >
-                  Assign to me
-                </button>
-              </div>
-            )}
+            <select
+              value={assignedTo}
+              onChange={(e) => setAssignedTo(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-indigo-400 transition-colors"
+            >
+              <option value="">Unassigned</option>
+              {modOptions.map((mod) => (
+                <option key={mod} value={mod}>
+                  u/{mod}{mod === username ? ' (me)' : ''}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Estimate */}
