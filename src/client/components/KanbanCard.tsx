@@ -1,5 +1,6 @@
 import type { Case } from '../../shared/api';
 import { timeAgo } from '../utils/time';
+import { FLAG_META } from '../utils/flags';
 
 type Props = {
   case: Case;
@@ -21,17 +22,15 @@ export const KanbanCard = ({ case: c, onClick }: Props) => {
         <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 leading-snug line-clamp-2">
           {c.title}
         </span>
-        <div className="flex gap-1 flex-shrink-0 mt-0.5">
-          {c.flags.includes('urgent') && (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 uppercase tracking-wide">
-              Urgent
-            </span>
-          )}
-          {c.flags.includes('sensitive') && (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400 uppercase tracking-wide">
-              Sensitive
-            </span>
-          )}
+        <div className="flex gap-1 flex-wrap flex-shrink-0 mt-0.5">
+          {c.flags.map((flag) => {
+            const meta = FLAG_META[flag];
+            return (
+              <span key={flag} className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide ${meta.badgeColors}`}>
+                {meta.label}
+              </span>
+            );
+          })}
         </div>
       </div>
 

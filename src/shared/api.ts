@@ -1,5 +1,5 @@
 export type CaseStatus = 'open' | 'in-progress' | 'resolved';
-export type CaseFlag = 'urgent' | 'sensitive';
+export type CaseFlag = 'low' | 'medium' | 'high' | 'urgent' | 'sensitive';
 
 export type CaseNote = {
   id: string;

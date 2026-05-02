@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Case, CaseFlag, CaseStatus } from '../../shared/api';
 import { timeAgo, shiftWeek, formatWeekRange, getWeekStart } from '../utils/time';
+import { ALL_FLAGS, FLAG_META } from '../utils/flags';
 
 const ESTIMATE_PRESETS = ['30m', '1h', '2h', '4h', '1d', '3d'];
 
@@ -206,21 +207,19 @@ export const CaseDetailModal = ({ case: c, username, mods, onUpdate, onAddNote, 
           <div>
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">Flags</label>
             <div className="flex gap-2 flex-wrap">
-              {(['urgent', 'sensitive'] as CaseFlag[]).map((flag) => {
+              {ALL_FLAGS.map((flag) => {
                 const active = c.flags.includes(flag);
-                const colors = flag === 'urgent'
-                  ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 border-red-200 dark:border-red-800'
-                  : 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400 border-purple-200 dark:border-purple-800';
+                const meta = FLAG_META[flag];
                 return (
                   <button
                     key={flag}
                     onClick={() => toggleFlag(flag)}
                     disabled={saving}
-                    className={`text-xs px-3 py-1.5 rounded-full font-medium border transition-all capitalize ${
-                      active ? colors : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300'
+                    className={`text-xs px-3 py-1.5 rounded-full font-medium border transition-all ${
+                      active ? meta.toggleColors : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300'
                     }`}
                   >
-                    {flag}
+                    {meta.label}
                   </button>
                 );
               })}
