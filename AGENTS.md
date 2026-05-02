@@ -1,23 +1,30 @@
 You are writing a Devvit web application that will be executed on Reddit.com.
 
+**This project is Mod-Sync** — a Kanban-style moderation board for Reddit mod teams. See `CLAUDE.md` for the full feature list, data model, API endpoints, and architectural patterns.
+
 ## Tech Stack
 
 - **Frontend**: React 19, Tailwind CSS 4, Vite
-- **Backend**: Node.js v22 serverless environment (Devvit), Hono, TRPC
-- **Communication**: tRPC v11 for end-to-end type safety
+- **Backend**: Node.js v22 serverless environment (Devvit), Hono REST API
+- **Communication**: Hono REST (not tRPC — do not add tRPC)
+- **Storage**: Redis via `@devvit/web/server`
 
 ## Layout & Architecture
 
 - `/src/server`: **Backend Code**. This runs in a secure, serverless environment.
-  - `trpc.ts`: Defines the API router and procedures.
   - `index.ts`: Main server entry point (Hono app).
+  - `routes/api.ts`: All case management endpoints.
   - Access `redis`, `reddit`, and `context` here via `@devvit/web/server`.
 - `/src/client`: **Frontend Code**. This is executed inside of an iFrame on reddit.com
   - To add an entrypoint, create a HTML file and add to the mapping inside of `devvit.json`
   - Entrypoints:
     - `game.html`: The main React entry point (Expanded View).
     - `splash.html`: The initial React entry point (Inline View). This will be shown in the reddit.com feed. Please keep it fast and keep heavy dependencies inside of `game.html`
+  - `hooks/useBoard.ts`: All board state and API calls — add new API operations here.
+  - `components/`: One file per UI component. See `CLAUDE.md` for the component registry.
+  - `utils/time.ts`: All date/time helpers — **always use UTC methods** for week calculations.
 - `/src/shared`: **Shared Code**. Code to share between the client and server
+  - `api.ts`: All shared TypeScript types. Update here when adding new fields.
 
 ## Frontend
 

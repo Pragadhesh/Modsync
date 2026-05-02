@@ -1,13 +1,28 @@
-## Devvit React Starter
+## Mod-Sync
 
-A starter to build web applications on Reddit's developer platform
+A Devvit-powered moderation tool that solves context loss between mod shifts.
 
-- [Devvit](https://developers.reddit.com/): A way to build and deploy immersive games on Reddit
-- [Vite](https://vite.dev/): For compiling the webView
-- [React](https://react.dev/): For UI
-- [Hono](https://hono.dev/): For backend logic
-- [Tailwind](https://tailwindcss.com/): For styles
-- [TypeScript](https://www.typescriptlang.org/): For type safety
+Mod-Sync gives subreddit mod teams a shared, persistent Kanban board to track pending cases, leave structured notes, flag urgent issues, assign tasks to specific mods, and log recent team actions — all without any external setup.
+
+**Target users:** Large and mid-sized subreddits with active mod teams across multiple timezones (e.g. r/india, r/cricket, r/AskReddit).
+
+### Core Features
+
+- Kanban board with Open / In Progress / Resolved columns
+- Per-case notes editable across sessions
+- Urgent/sensitive flag system
+- Mod assignment per case
+- Activity log of recent team actions
+- One-click install via Devvit App Directory
+
+### Built with
+
+- [Devvit](https://developers.reddit.com/): Reddit's developer platform
+- [Vite](https://vite.dev/): Frontend bundler
+- [React](https://react.dev/): UI
+- [Hono](https://hono.dev/): Backend routing
+- [Tailwind](https://tailwindcss.com/): Styles
+- [TypeScript](https://www.typescriptlang.org/): Type safety
 
 ## Getting Started
 
