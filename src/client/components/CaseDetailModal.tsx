@@ -46,6 +46,7 @@ export const CaseDetailModal = ({ case: c, username, mods, onUpdate, onAddNote, 
   const [estimate, setEstimate] = useState(c.estimate ?? '');
   const [localStatus, setLocalStatus]     = useState<CaseStatus>(c.status);
   const [localAssignee, setLocalAssignee] = useState<string>(c.assignedTo ?? '');
+  const [localFlag, setLocalFlag]         = useState<CaseFlag | null>(c.flags[0] ?? null);
   const [commentText, setCommentText] = useState('');
   const [saving, setSaving] = useState(false);
   const [addingComment, setAddingComment] = useState(false);
@@ -56,7 +57,8 @@ export const CaseDetailModal = ({ case: c, username, mods, onUpdate, onAddNote, 
   const estimateDirty = estimate !== (c.estimate ?? '');
   const statusDirty   = localStatus !== c.status;
   const assigneeDirty = localAssignee !== (c.assignedTo ?? '');
-  const isDirty       = titleDirty || descDirty || estimateDirty || statusDirty || assigneeDirty;
+  const flagDirty     = localFlag !== (c.flags[0] ?? null);
+  const isDirty       = titleDirty || descDirty || estimateDirty || statusDirty || assigneeDirty || flagDirty;
 
   // Deduplicate: current user first, then other mods alphabetically
   const modOptions = [
@@ -74,6 +76,7 @@ export const CaseDetailModal = ({ case: c, username, mods, onUpdate, onAddNote, 
         ...(estimateDirty && { estimate: estimate.trim() || null }),
         ...(statusDirty   && { status: localStatus }),
         ...(assigneeDirty && { assignedTo: localAssignee || null }),
+        ...(flagDirty     && { flags: localFlag ? [localFlag] : [] }),
       });
       onClose();
     } finally {
@@ -81,13 +84,8 @@ export const CaseDetailModal = ({ case: c, username, mods, onUpdate, onAddNote, 
     }
   };
 
-  const toggleFlag = async (flag: CaseFlag) => {
-    const flags = c.flags.includes(flag)
-      ? c.flags.filter((f) => f !== flag)
-      : [...c.flags, flag];
-    setSaving(true);
-    try { await onUpdate(c.id, { flags }); }
-    finally { setSaving(false); }
+  const toggleFlag = (flag: CaseFlag) => {
+    setLocalFlag((prev) => (prev === flag ? null : flag));
   };
 
   const submitComment = async () => {
@@ -208,15 +206,13 @@ export const CaseDetailModal = ({ case: c, username, mods, onUpdate, onAddNote, 
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">Flags</label>
             <div className="flex gap-2 flex-wrap">
               {ALL_FLAGS.map((flag) => {
-                const active = c.flags.includes(flag);
                 const meta = FLAG_META[flag];
                 return (
                   <button
                     key={flag}
                     onClick={() => toggleFlag(flag)}
-                    disabled={saving}
                     className={`text-xs px-3 py-1.5 rounded-full font-medium border transition-all ${
-                      active ? meta.toggleColors : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300'
+                      localFlag === flag ? meta.toggleColors : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300'
                     }`}
                   >
                     {meta.label}

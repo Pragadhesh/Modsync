@@ -27,9 +27,7 @@ export const NewCaseModal = ({ username, mods, onSubmit, onClose }: Props) => {
   ];
 
   const toggleFlag = (flag: CaseFlag) => {
-    setFlags((prev) =>
-      prev.includes(flag) ? prev.filter((f) => f !== flag) : [...prev, flag]
-    );
+    setFlags((prev) => (prev.includes(flag) ? [] : [flag]));
   };
 
   const submit = async () => {
