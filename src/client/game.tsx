@@ -1,6 +1,6 @@
 import './index.css';
 
-import { StrictMode, useState } from 'react';
+import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Case, CaseStatus } from '../shared/api';
 import { useBoard } from './hooks/useBoard';
@@ -26,8 +26,18 @@ export const App = () => {
   const [assigneeFilter,setAssigneeFilter]= useState<string | null>(null);
   const [activeTab,     setActiveTab]     = useState<CaseStatus>('open');
   const [dragOverCol,   setDragOverCol]   = useState<CaseStatus | null>(null);
+  const [searchActive,  setSearchActive]  = useState(false);
+  const [searchQuery,   setSearchQuery]   = useState('');
 
   const thisWeek = getWeekStart();
+
+  // Auto-open the case linked from a notification click
+  useEffect(() => {
+    if (!board.loading && board.openCaseId) {
+      const target = board.cases.find((c) => c.id === board.openCaseId);
+      if (target) setSelectedCase(target);
+    }
+  }, [board.loading, board.openCaseId, board.cases]);
 
   const liveCase = selectedCase
     ? board.cases.find((c) => c.id === selectedCase.id) ?? null
@@ -77,13 +87,22 @@ export const App = () => {
     );
   }
 
-  const weekCases = board.cases.filter((c) => c.sprintWeek === currentWeek);
+  const q = searchQuery.trim().toLowerCase();
+  const baseCases = q
+    ? board.cases.filter(
+        (c) =>
+          c.title.toLowerCase().includes(q) ||
+          c.description.toLowerCase().includes(q) ||
+          (c.assignedTo ?? '').toLowerCase().includes(q)
+      )
+    : board.cases.filter((c) => c.sprintWeek === currentWeek);
+
   const visibleCases =
     assigneeFilter === null
-      ? weekCases
+      ? baseCases
       : assigneeFilter === UNASSIGNED
-        ? weekCases.filter((c) => !c.assignedTo)
-        : weekCases.filter((c) => c.assignedTo === assigneeFilter);
+        ? baseCases.filter((c) => !c.assignedTo)
+        : baseCases.filter((c) => c.assignedTo === assigneeFilter);
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-950 overflow-hidden">
@@ -102,45 +121,89 @@ export const App = () => {
           )}
         </div>
 
-        {/* Week navigator */}
-        <div className="flex items-center gap-0.5 flex-shrink-0">
-          <button
-            onClick={() => setCurrentWeek((w) => shiftWeek(w, -1))}
-            className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <div className="flex items-center gap-1 px-1">
-            <span className="text-xs font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
-              {formatWeekRange(currentWeek)}
-            </span>
-            {currentWeek === thisWeek && (
-              <span className="hidden sm:inline text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400">
-                This week
+        {/* Week navigator / search */}
+        {searchActive ? (
+          <div className="flex items-center gap-1 flex-1 max-w-xs">
+            <input
+              autoFocus
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') { setSearchActive(false); setSearchQuery(''); }
+              }}
+              placeholder="Search cases…"
+              className="flex-1 px-2.5 py-1 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-indigo-400 transition-colors"
+            />
+            <button
+              onClick={() => { setSearchActive(false); setSearchQuery(''); }}
+              className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-0.5 flex-shrink-0">
+            <button
+              onClick={() => setCurrentWeek((w) => shiftWeek(w, -1))}
+              className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <div className="flex items-center gap-1 px-1">
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                {formatWeekRange(currentWeek)}
               </span>
+              {currentWeek === thisWeek && (
+                <span className="hidden sm:inline text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400">
+                  This week
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => setCurrentWeek((w) => shiftWeek(w, 1))}
+              className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            {currentWeek !== thisWeek && (
+              <button
+                onClick={() => setCurrentWeek(thisWeek)}
+                className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline ml-0.5 whitespace-nowrap"
+              >
+                Today
+              </button>
             )}
           </div>
-          <button
-            onClick={() => setCurrentWeek((w) => shiftWeek(w, 1))}
-            className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-          {currentWeek !== thisWeek && (
-            <button
-              onClick={() => setCurrentWeek(thisWeek)}
-              className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline ml-0.5 whitespace-nowrap"
-            >
-              Today
-            </button>
-          )}
-        </div>
+        )}
 
         <div className="flex items-center gap-1.5 flex-shrink-0">
+          {!board.notificationsEnabled && (
+            <span
+              title="Push notifications are off — enable Reddit notifications in your device settings, then reload"
+              className="p-1.5 text-amber-500 dark:text-amber-400 cursor-help"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                <line x1="4" y1="4" x2="20" y2="20" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
+              </svg>
+            </span>
+          )}
+          <button
+            onClick={() => { setSearchActive((v) => !v); setSearchQuery(''); }}
+            className={`p-1.5 rounded-lg transition-colors ${searchActive ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/30' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+            title="Search cases"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </button>
           <button
             onClick={() => setShowActivity(true)}
             className="p-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
@@ -157,7 +220,7 @@ export const App = () => {
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            <span>New Case</span>
+            <span className="hidden sm:inline">New Case</span>
           </button>
         </div>
       </header>

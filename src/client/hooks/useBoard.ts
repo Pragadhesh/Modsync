@@ -14,6 +14,8 @@ type BoardState = {
   mods: string[];
   cases: Case[];
   activity: ActivityEntry[];
+  openCaseId: string | null;
+  notificationsEnabled: boolean;
   loading: boolean;
   error: string | null;
 };
@@ -35,6 +37,8 @@ export const useBoard = () => {
     mods: [],
     cases: [],
     activity: [],
+    openCaseId: null,
+    notificationsEnabled: true,
     loading: true,
     error: null,
   });
@@ -45,7 +49,7 @@ export const useBoard = () => {
         const res = await fetch('/api/init');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = (await res.json()) as InitResponse;
-        setState({ username: data.username, isMod: data.isMod, mods: data.mods, cases: data.cases, activity: data.activity, loading: false, error: null });
+        setState({ username: data.username, isMod: data.isMod, mods: data.mods, cases: data.cases, activity: data.activity, openCaseId: data.openCaseId, notificationsEnabled: data.notificationsEnabled, loading: false, error: null });
       } catch {
         setState((prev) => ({ ...prev, loading: false, error: 'Failed to load board' }));
       }

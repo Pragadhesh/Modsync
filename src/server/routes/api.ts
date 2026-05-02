@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
-import { context, redis, reddit } from '@devvit/web/server';
+import { context, notifications, redis, reddit } from '@devvit/web/server';
+import { type T3 } from '@devvit/shared-types/tid.js';
 import type {
   Case,
   CaseNote,
@@ -55,11 +56,66 @@ const pushActivity = async (
 const genId = () =>
   Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
 
+const sendNotification = async (to: string, title: string, body: string, caseId?: string): Promise<void> => {
+  try {
+    const postId = context.postId;
+    const subredditName = context.subredditName;
+    if (!postId) return;
+
+    // Store deep-link key so the board auto-opens the case on next visit.
+    if (caseId) {
+      await redis.set(`pending_case:${to}`, caseId, {
+        expiration: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      });
+    }
+
+    // 1. Try push notification (opted-in users get a proper bell notification).
+    let pushed = false;
+    try {
+      const user = await reddit.getUserByUsername(to);
+      if (user) {
+        const result = await notifications.enqueue({
+          title,
+          body,
+          recipients: [{ userId: user.id, link: postId as T3, data: {} }],
+        });
+        pushed = result.successCount > 0;
+      }
+    } catch { /* ignore, fall through to PM */ }
+
+    // 2. Fallback: send a PM from the subreddit account so it shows as a real
+    //    inbox message (not a "message request") and always rings the bell.
+    if (!pushed && subredditName) {
+      await reddit.sendPrivateMessageAsSubreddit({
+        to,
+        subject: title,
+        text: `${body}\n\n*Sent by Mod-Sync*`,
+        fromSubredditName: subredditName,
+      });
+    }
+  } catch { /* non-fatal */ }
+};
+
+const parseMentions = (text: string): string[] => {
+  const matches = text.match(/u\/([A-Za-z0-9_-]+)/g) ?? [];
+  return [...new Set(matches.map((m) => m.slice(2)))];
+};
+
 export const api = new Hono();
 
 const MODS_CACHE_MS = 10 * 60 * 1000; // reuse cached list for 10 minutes
 
-const getModeratorNames = async (subredditName: string): Promise<string[]> => {
+const fetchModeratorNames = async (subredditName: string): Promise<string[]> => {
+  const fetchMods = (async () => {
+    const listing = reddit.getModerators({ subredditName });
+    const users = await listing.all();
+    return users.map((u) => u.username);
+  })();
+  const fallback = new Promise<string[]>((resolve) => setTimeout(() => resolve([]), 4000));
+  return Promise.race([fetchMods, fallback]);
+};
+
+const getModeratorNames = async (subredditName: string, mustInclude?: string): Promise<string[]> => {
   const cacheKey = `mods:${subredditName}`;
 
   // Serve from cache when fresh — avoids blocking /init on every load
@@ -67,23 +123,17 @@ const getModeratorNames = async (subredditName: string): Promise<string[]> => {
     const raw = await redis.get(cacheKey);
     if (raw) {
       const { mods, ts } = JSON.parse(raw) as { mods: string[]; ts: number };
-      if (Date.now() - ts < MODS_CACHE_MS) return mods;
+      if (Date.now() - ts < MODS_CACHE_MS) {
+        // Cache hit — but if the user isn't listed, do a one-time fresh fetch.
+        // This handles the case where a mod was added after the cache was written.
+        if (!mustInclude || mods.includes(mustInclude)) return mods;
+      }
     }
   } catch { /* ignore cache read errors */ }
 
   // Fetch with a 4-second hard timeout so a slow listing never hangs the handler
   try {
-    const fetchMods = (async () => {
-      const listing = reddit.getModerators({ subredditName });
-      const users = await listing.all();
-      return users.map((u) => u.username);
-    })();
-
-    const fallback = new Promise<string[]>((resolve) =>
-      setTimeout(() => resolve([]), 4000)
-    );
-
-    const mods = await Promise.race([fetchMods, fallback]);
+    const mods = await fetchModeratorNames(subredditName);
     if (mods.length > 0) {
       await redis.set(cacheKey, JSON.stringify({ mods, ts: Date.now() }));
     }
@@ -105,9 +155,16 @@ api.get('/init', async (c) => {
   const actor = username ?? 'anonymous';
 
   const subredditName = context.subredditName ?? '';
-  const mods = subredditName ? await getModeratorNames(subredditName) : [];
+  const mods = subredditName ? await getModeratorNames(subredditName, actor) : [];
+  const notificationsEnabled = await notifications.optInCurrentUser()
+    .then((r) => r.success)
+    .catch(() => false); // non-fatal; PM fallback covers non-opted-in users
   // Fail open: if mods list is empty (e.g. dev environment), allow access
   const isMod = mods.length === 0 || mods.includes(actor);
+
+  const pendingKey = `pending_case:${actor}`;
+  const openCaseId = await redis.get(pendingKey);
+  if (openCaseId) void redis.del(pendingKey);
 
   return c.json<InitResponse>({
     type: 'init',
@@ -116,7 +173,18 @@ api.get('/init', async (c) => {
     mods,
     cases,
     activity,
+    openCaseId: openCaseId ?? null,
+    notificationsEnabled,
   });
+});
+
+// Lightweight endpoint for splash to check if the current user has a pending
+// notification deep-link without loading the full board data.
+api.get('/pending-case', async (c) => {
+  const username = await reddit.getCurrentUsername();
+  if (!username) return c.json({ hasPending: false });
+  const caseId = await redis.get(`pending_case:${username}`);
+  return c.json({ hasPending: !!caseId });
 });
 
 api.post('/cases/create', async (c) => {
@@ -161,6 +229,16 @@ api.post('/cases/create', async (c) => {
     caseTitle: newCase.title,
   });
   await saveCases(updatedCases);
+
+  if (newCase.assignedTo && newCase.assignedTo !== actor) {
+    void sendNotification(
+      newCase.assignedTo,
+      `[Mod-Sync] Case assigned to you`,
+      `u/${actor} assigned "${newCase.title}" to you`,
+      newCase.id
+    );
+  }
+
   return c.json<CasesResponse>({ type: 'cases', cases: updatedCases, activity: updatedActivity });
 });
 
@@ -242,6 +320,21 @@ api.post('/cases/update', async (c) => {
     });
   }
 
+  // Notify newly assigned mod (skip if they assigned it to themselves)
+  if (
+    'assignedTo' in body &&
+    body.assignedTo &&
+    body.assignedTo !== prev.assignedTo &&
+    body.assignedTo !== actor
+  ) {
+    void sendNotification(
+      body.assignedTo,
+      `[Mod-Sync] Case assigned to you`,
+      `u/${actor} assigned "${updated.title}" to you`,
+      updated.id
+    );
+  }
+
   return c.json<CasesResponse>({ type: 'cases', cases, activity: updatedActivity });
 });
 
@@ -278,6 +371,27 @@ api.post('/cases/add-note', async (c) => {
     caseId: existing.id,
     caseTitle: existing.title,
   });
+
+  const notifyText = `u/${actor} commented on "${existing.title}": ${text.trim()}`;
+
+  // Notify assignee when someone else comments
+  if (existing.assignedTo && existing.assignedTo !== actor) {
+    void sendNotification(
+      existing.assignedTo,
+      `[Mod-Sync] New comment on your case`,
+      notifyText,
+      existing.id
+    );
+  }
+
+  // Notify mentioned users (excluding actor and assignee already notified)
+  const mentioned = parseMentions(text).filter(
+    (u) => u !== actor && u !== existing.assignedTo
+  );
+  for (const u of mentioned) {
+    void sendNotification(u, `[Mod-Sync] You were mentioned in a case`, notifyText, existing.id);
+  }
+
   return c.json<CasesResponse>({ type: 'cases', cases, activity: updatedActivity });
 });
 

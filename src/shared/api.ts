@@ -39,6 +39,8 @@ export type InitResponse = {
   mods: string[];
   cases: Case[];
   activity: ActivityEntry[];
+  openCaseId: string | null;
+  notificationsEnabled: boolean;
 };
 
 export type CasesResponse = {

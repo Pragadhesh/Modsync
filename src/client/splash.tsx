@@ -1,10 +1,21 @@
 import './index.css';
 
-import { StrictMode } from 'react';
+import { StrictMode, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { context, requestExpandedMode } from '@devvit/web/client';
 
 export const Splash = () => {
+  useEffect(() => {
+    fetch('/api/pending-case')
+      .then((r) => r.json() as Promise<{ hasPending: boolean }>)
+      .then(({ hasPending }) => {
+        if (hasPending) {
+          try { requestExpandedMode(new MouseEvent('click'), 'game'); } catch { /* already expanded */ }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="flex flex-col justify-center items-center min-h-screen gap-4 bg-white dark:bg-gray-900 px-6">
       {/* Logo / brand */}
