@@ -14,7 +14,7 @@ export const NewCaseModal = ({ username, mods, onSubmit, onClose }: Props) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [flags, setFlags] = useState<CaseFlag[]>([]);
-  const [assignedTo, setAssignedTo] = useState<string>(username);
+  const [assignedTo, setAssignedTo] = useState<string>('');
   const [estimate, setEstimate] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');

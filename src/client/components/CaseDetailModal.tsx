@@ -43,7 +43,8 @@ export const CaseDetailModal = ({ case: c, username, mods, onUpdate, onAddNote, 
   const [title, setTitle] = useState(c.title);
   const [description, setDescription] = useState(c.description);
   const [estimate, setEstimate] = useState(c.estimate ?? '');
-  const [localStatus, setLocalStatus] = useState<CaseStatus>(c.status);
+  const [localStatus, setLocalStatus]     = useState<CaseStatus>(c.status);
+  const [localAssignee, setLocalAssignee] = useState<string>(c.assignedTo ?? '');
   const [commentText, setCommentText] = useState('');
   const [saving, setSaving] = useState(false);
   const [addingComment, setAddingComment] = useState(false);
@@ -53,7 +54,8 @@ export const CaseDetailModal = ({ case: c, username, mods, onUpdate, onAddNote, 
   const descDirty     = description !== c.description;
   const estimateDirty = estimate !== (c.estimate ?? '');
   const statusDirty   = localStatus !== c.status;
-  const isDirty       = titleDirty || descDirty || estimateDirty || statusDirty;
+  const assigneeDirty = localAssignee !== (c.assignedTo ?? '');
+  const isDirty       = titleDirty || descDirty || estimateDirty || statusDirty || assigneeDirty;
 
   // Deduplicate: current user first, then other mods alphabetically
   const modOptions = [
@@ -70,6 +72,7 @@ export const CaseDetailModal = ({ case: c, username, mods, onUpdate, onAddNote, 
         ...(descDirty     && { description }),
         ...(estimateDirty && { estimate: estimate.trim() || null }),
         ...(statusDirty   && { status: localStatus }),
+        ...(assigneeDirty && { assignedTo: localAssignee || null }),
       });
       onClose();
     } finally {
@@ -83,12 +86,6 @@ export const CaseDetailModal = ({ case: c, username, mods, onUpdate, onAddNote, 
       : [...c.flags, flag];
     setSaving(true);
     try { await onUpdate(c.id, { flags }); }
-    finally { setSaving(false); }
-  };
-
-  const changeAssignee = async (value: string) => {
-    setSaving(true);
-    try { await onUpdate(c.id, { assignedTo: value || null }); }
     finally { setSaving(false); }
   };
 
@@ -269,8 +266,8 @@ export const CaseDetailModal = ({ case: c, username, mods, onUpdate, onAddNote, 
           <div>
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5 block">Assigned to</label>
             <select
-              value={c.assignedTo ?? ''}
-              onChange={(e) => changeAssignee(e.target.value)}
+              value={localAssignee}
+              onChange={(e) => setLocalAssignee(e.target.value)}
               disabled={saving}
               className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-indigo-400 transition-colors disabled:opacity-50"
             >

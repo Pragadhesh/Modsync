@@ -57,11 +57,37 @@ const genId = () =>
 
 export const api = new Hono();
 
+const MODS_CACHE_MS = 10 * 60 * 1000; // reuse cached list for 10 minutes
+
 const getModeratorNames = async (subredditName: string): Promise<string[]> => {
+  const cacheKey = `mods:${subredditName}`;
+
+  // Serve from cache when fresh — avoids blocking /init on every load
   try {
-    const listing = await reddit.getModerators({ subredditName });
-    const users = await listing.all();
-    return users.map((u) => u.username);
+    const raw = await redis.get(cacheKey);
+    if (raw) {
+      const { mods, ts } = JSON.parse(raw) as { mods: string[]; ts: number };
+      if (Date.now() - ts < MODS_CACHE_MS) return mods;
+    }
+  } catch { /* ignore cache read errors */ }
+
+  // Fetch with a 4-second hard timeout so a slow listing never hangs the handler
+  try {
+    const fetchMods = (async () => {
+      const listing = reddit.getModerators({ subredditName });
+      const users = await listing.all();
+      return users.map((u) => u.username);
+    })();
+
+    const fallback = new Promise<string[]>((resolve) =>
+      setTimeout(() => resolve([]), 4000)
+    );
+
+    const mods = await Promise.race([fetchMods, fallback]);
+    if (mods.length > 0) {
+      await redis.set(cacheKey, JSON.stringify({ mods, ts: Date.now() }));
+    }
+    return mods;
   } catch {
     return [];
   }
