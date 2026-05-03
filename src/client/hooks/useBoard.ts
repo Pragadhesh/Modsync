@@ -62,8 +62,8 @@ export const useBoard = () => {
   }, []);
 
   const createCase = useCallback(
-    async (title: string, description: string, flags: CaseFlag[], assignedTo: string | null, estimate: string | null) => {
-      const data = await post('/api/cases/create', { title, description, flags, assignedTo, estimate });
+    async (title: string, description: string, flags: CaseFlag[], assignedTo: string | null, estimate: string | null, linkedUrl: string | null) => {
+      const data = await post('/api/cases/create', { title, description, flags, assignedTo, estimate, linkedUrl });
       applyResponse(data);
     },
     [applyResponse]
@@ -80,6 +80,7 @@ export const useBoard = () => {
         assignedTo?: string | null;
         estimate?: string | null;
         sprintWeek?: string;
+        linkedUrl?: string | null;
       }
     ) => {
       const data = await post('/api/cases/update', { id, ...updates });

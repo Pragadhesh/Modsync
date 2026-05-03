@@ -10,6 +10,7 @@ import type {
   InitResponse,
   CasesResponse,
   ErrorResponse,
+  RedditPreviewData,
 } from '../../shared/api';
 
 const casesKey = () => `cases:${context.postId}`;
@@ -32,6 +33,7 @@ const getCases = async (): Promise<Case[]> => {
     ...c,
     sprintWeek: c.sprintWeek ?? weekStartFromMs(c.createdAt),
     estimate: c.estimate ?? null,
+    linkedUrl: c.linkedUrl ?? null,
   }));
 };
 
@@ -187,16 +189,33 @@ api.get('/pending-case', async (c) => {
   return c.json({ hasPending: !!caseId });
 });
 
+api.get('/cases/reddit-preview', async (c) => {
+  const postId = c.req.query('postId');
+  if (!postId) return c.json<ErrorResponse>({ type: 'error', message: 'Missing postId' }, 400);
+  try {
+    const post = await reddit.getPostById(`t3_${postId}` as T3);
+    return c.json<RedditPreviewData>({
+      title: post.title,
+      author: post.authorName ?? '',
+      subreddit: post.subredditName,
+      flair: post.flair?.text ?? null,
+    });
+  } catch {
+    return c.json<ErrorResponse>({ type: 'error', message: 'Post not found' }, 404);
+  }
+});
+
 api.post('/cases/create', async (c) => {
   if (!context.postId) {
     return c.json<ErrorResponse>({ type: 'error', message: 'No postId in context' }, 400);
   }
-  const { title, description, flags, assignedTo, estimate } = await c.req.json<{
+  const { title, description, flags, assignedTo, estimate, linkedUrl } = await c.req.json<{
     title: string;
     description: string;
     flags: CaseFlag[];
     assignedTo: string | null;
     estimate: string | null;
+    linkedUrl: string | null;
   }>();
   const [username, cases, activity] = await Promise.all([
     reddit.getCurrentUsername(),
@@ -213,6 +232,7 @@ api.post('/cases/create', async (c) => {
     flags: flags ?? [],
     assignedTo: assignedTo?.trim() || null,
     estimate: estimate?.trim() || null,
+    linkedUrl: linkedUrl?.trim() || null,
     notes: [],
     createdBy: actor,
     createdAt: now,
@@ -255,6 +275,7 @@ api.post('/cases/update', async (c) => {
     assignedTo?: string | null;
     estimate?: string | null;
     sprintWeek?: string;
+    linkedUrl?: string | null;
   }>();
   const [username, cases, activity] = await Promise.all([
     reddit.getCurrentUsername(),
@@ -280,6 +301,7 @@ api.post('/cases/update', async (c) => {
     flags: body.flags ?? prev.flags,
     assignedTo: 'assignedTo' in body ? (body.assignedTo ?? null) : prev.assignedTo,
     estimate: 'estimate' in body ? (body.estimate?.trim() || null) : (prev.estimate ?? null),
+    linkedUrl: 'linkedUrl' in body ? (body.linkedUrl?.trim() || null) : (prev.linkedUrl ?? null),
     notes: prev.notes,
     createdBy: prev.createdBy,
     createdAt: prev.createdAt,

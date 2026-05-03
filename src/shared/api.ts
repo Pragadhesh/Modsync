@@ -16,6 +16,7 @@ export type Case = {
   flags: CaseFlag[];
   assignedTo: string | null;
   estimate: string | null; // e.g. "2h", "1d", "30m"
+  linkedUrl: string | null; // Reddit post/comment URL
   notes: CaseNote[];
   createdBy: string;
   createdAt: number;
@@ -52,4 +53,11 @@ export type CasesResponse = {
 export type ErrorResponse = {
   type: 'error';
   message: string;
+};
+
+export type RedditPreviewData = {
+  title: string;
+  author: string;
+  subreddit: string;
+  flair: string | null;
 };
