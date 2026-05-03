@@ -3,6 +3,13 @@ import type { RedditPreviewData } from '../../shared/api';
 import type { ParsedRedditUrl } from '../utils/redditUrl';
 import { redditPostUrl } from '../utils/redditUrl';
 
+const openInNewTab = (url: string) => {
+  // window.open is allowed by Devvit's sandbox when called from a user gesture.
+  // Fall back to navigateTo (same-tab) only if the popup was blocked.
+  const w = window.open(url, '_blank', 'noopener,noreferrer');
+  if (!w) navigateTo(url);
+};
+
 const SnooIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 20 20" fill="currentColor">
     <circle cx="10" cy="10" r="10" fill="#FF4500" />
@@ -27,7 +34,7 @@ export const RedditPreviewCard = ({ parsedLink, preview, loading }: Props) => {
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    navigateTo(url);
+    openInNewTab(url);
   };
 
   return (
