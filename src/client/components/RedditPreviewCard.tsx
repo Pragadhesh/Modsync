@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { navigateTo } from '@devvit/web/client';
 import type { RedditPreviewData } from '../../shared/api';
 import type { ParsedRedditUrl } from '../utils/redditUrl';

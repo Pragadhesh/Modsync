@@ -1,6 +1,6 @@
 import './index.css';
 
-import { StrictMode, useEffect, useState } from 'react';
+import React, { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Case, CaseStatus } from '../shared/api';
 import { useBoard } from './hooks/useBoard';
@@ -35,6 +35,7 @@ export const App = () => {
   useEffect(() => {
     if (!board.loading && board.openCaseId) {
       const target = board.cases.find((c) => c.id === board.openCaseId);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (target) setSelectedCase(target);
     }
   }, [board.loading, board.openCaseId, board.cases]);
