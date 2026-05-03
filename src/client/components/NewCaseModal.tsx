@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { CaseFlag } from '../../shared/api';
 import { ALL_FLAGS, FLAG_META } from '../utils/flags';
+import { AssigneePicker } from './AssigneePicker';
 
 const ESTIMATE_PRESETS = ['30m', '1h', '2h', '4h', '1d', '3d'];
 
@@ -19,12 +20,6 @@ export const NewCaseModal = ({ username, mods, onSubmit, onClose }: Props) => {
   const [estimate, setEstimate] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-
-  // Deduplicate: current user first, then other mods alphabetically
-  const modOptions = [
-    username,
-    ...mods.filter((m) => m !== username).sort(),
-  ];
 
   const toggleFlag = (flag: CaseFlag) => {
     setFlags((prev) => (prev.includes(flag) ? [] : [flag]));
@@ -77,23 +72,17 @@ export const NewCaseModal = ({ username, mods, onSubmit, onClose }: Props) => {
             />
           </div>
 
-          {/* Assignee dropdown */}
+          {/* Assignee picker */}
           <div>
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5 block">
               Assignee
             </label>
-            <select
+            <AssigneePicker
               value={assignedTo}
-              onChange={(e) => setAssignedTo(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-indigo-400 transition-colors"
-            >
-              <option value="">Unassigned</option>
-              {modOptions.map((mod) => (
-                <option key={mod} value={mod}>
-                  u/{mod}{mod === username ? ' (me)' : ''}
-                </option>
-              ))}
-            </select>
+              mods={mods}
+              currentUsername={username}
+              onChange={setAssignedTo}
+            />
           </div>
 
           {/* Estimate */}

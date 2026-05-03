@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Case, CaseFlag, CaseStatus } from '../../shared/api';
 import { timeAgo, shiftWeek, formatWeekRange, getWeekStart } from '../utils/time';
 import { ALL_FLAGS, FLAG_META } from '../utils/flags';
+import { AssigneePicker } from './AssigneePicker';
 
 const ESTIMATE_PRESETS = ['30m', '1h', '2h', '4h', '1d', '3d'];
 
@@ -59,12 +60,6 @@ export const CaseDetailModal = ({ case: c, username, mods, onUpdate, onAddNote, 
   const assigneeDirty = localAssignee !== (c.assignedTo ?? '');
   const flagDirty     = localFlag !== (c.flags[0] ?? null);
   const isDirty       = titleDirty || descDirty || estimateDirty || statusDirty || assigneeDirty || flagDirty;
-
-  // Deduplicate: current user first, then other mods alphabetically
-  const modOptions = [
-    username,
-    ...mods.filter((m) => m !== username).sort(),
-  ];
 
   const save = async () => {
     if (!isDirty) return;
@@ -257,22 +252,16 @@ export const CaseDetailModal = ({ case: c, username, mods, onUpdate, onAddNote, 
             </div>
           </div>
 
-          {/* Assignee dropdown */}
+          {/* Assignee picker */}
           <div>
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5 block">Assigned to</label>
-            <select
+            <AssigneePicker
               value={localAssignee}
-              onChange={(e) => setLocalAssignee(e.target.value)}
+              mods={mods}
+              currentUsername={username}
+              onChange={setLocalAssignee}
               disabled={saving}
-              className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-indigo-400 transition-colors disabled:opacity-50"
-            >
-              <option value="">Unassigned</option>
-              {modOptions.map((mod) => (
-                <option key={mod} value={mod}>
-                  u/{mod}{mod === username ? ' (me)' : ''}
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
           {/* ── Comments (Jira-style) ── */}
