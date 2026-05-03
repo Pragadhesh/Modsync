@@ -1,14 +1,8 @@
+import { useState } from 'react';
 import { navigateTo } from '@devvit/web/client';
 import type { RedditPreviewData } from '../../shared/api';
 import type { ParsedRedditUrl } from '../utils/redditUrl';
 import { redditPostUrl } from '../utils/redditUrl';
-
-const openInNewTab = (url: string) => {
-  // window.open is allowed by Devvit's sandbox when called from a user gesture.
-  // Fall back to navigateTo (same-tab) only if the popup was blocked.
-  const w = window.open(url, '_blank', 'noopener,noreferrer');
-  if (!w) navigateTo(url);
-};
 
 const SnooIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 20 20" fill="currentColor">
@@ -27,14 +21,27 @@ type Props = {
 };
 
 export const RedditPreviewCard = ({ parsedLink, preview, loading }: Props) => {
+  const [copied, setCopied] = useState(false);
   const url = redditPostUrl(parsedLink);
   const subreddit = preview?.subreddit || parsedLink.subreddit;
   const title = preview?.title || parsedLink.slug || `Post ${parsedLink.postId}`;
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    openInNewTab(url);
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard API blocked — fall back to same-tab navigate
+      navigateTo(url);
+    }
+  };
+
+  const handleOpen = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigateTo(url);
   };
 
   return (
@@ -45,43 +52,60 @@ export const RedditPreviewCard = ({ parsedLink, preview, loading }: Props) => {
           <span className="text-xs text-gray-400 dark:text-gray-500">Loading preview…</span>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={handleClick}
-          className="w-full flex items-start gap-2.5 px-3 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group text-left"
-        >
-          <SnooIcon className="w-4 h-4 mt-0.5 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-              {title}
-            </p>
-            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-              {subreddit && (
-                <span className="text-[10px] font-semibold text-orange-600 dark:text-orange-400">
-                  r/{subreddit}
+        <div className="flex items-start gap-2 px-3 py-2.5">
+          {/* Info area — click to copy link */}
+          <button
+            type="button"
+            onClick={handleCopy}
+            title={copied ? 'Copied!' : 'Copy link to open in new tab'}
+            className="flex items-start gap-2 flex-1 min-w-0 text-left group"
+          >
+            <SnooIcon className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                {title}
+              </p>
+              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                {subreddit && (
+                  <span className="text-[10px] font-semibold text-orange-600 dark:text-orange-400">
+                    r/{subreddit}
+                  </span>
+                )}
+                {preview?.author && (
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                    · u/{preview.author}
+                  </span>
+                )}
+                {preview?.flair && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400">
+                    {preview.flair}
+                  </span>
+                )}
+                {parsedLink.type === 'comment' && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                    comment
+                  </span>
+                )}
+                <span className={`text-[10px] transition-colors ${copied ? 'text-green-500 dark:text-green-400' : 'text-gray-300 dark:text-gray-600'}`}>
+                  {copied ? '✓ Link copied' : '· click to copy'}
                 </span>
-              )}
-              {preview?.author && (
-                <span className="text-[10px] text-gray-400 dark:text-gray-500">
-                  · u/{preview.author}
-                </span>
-              )}
-              {preview?.flair && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400">
-                  {preview.flair}
-                </span>
-              )}
-              {parsedLink.type === 'comment' && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
-                  comment
-                </span>
-              )}
+              </div>
             </div>
-          </div>
-          <svg className="w-3 h-3 text-gray-300 dark:text-gray-600 flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-          </svg>
-        </button>
+          </button>
+
+          {/* Open button — same-tab navigate */}
+          <button
+            type="button"
+            onClick={handleOpen}
+            title="Open post"
+            className="flex-shrink-0 flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded-md bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors mt-0.5"
+          >
+            Open
+            <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </button>
+        </div>
       )}
     </div>
   );
