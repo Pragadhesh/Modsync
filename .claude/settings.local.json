@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git remote *)",
+      "Bash(git push *)",
+      "Bash(ssh-keygen -F github.com)",
+      "Read(//c/Users/praga/**)",
+      "PowerShell(ls $env:USERPROFILE\\\\.ssh\\\\ 2>&1)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\praga\\\\Documents\\\\mod-sync\" -Recurse -Include \"*.ts\", \"*.tsx\", \"*.json\")",
+      "Bash(Select-Object FullName)",
+      "Bash(Sort-Object FullName)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\praga\\\\Documents\\\\mod-sync\" -Recurse -Force)",
+      "Bash(ConvertTo-Csv -NoTypeInformation)",
+      "Bash(Out-String)",
+      "Bash(npm run *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\praga\\\\Documents\\\\mod-sync\\\\src\" -Recurse -File)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(node -e \"const m = require\\('./node_modules/@devvit/web/server'\\); console.log\\(Object.keys\\(m\\)\\)\")",
+      "Bash(cat node_modules/@devvit/notifications/types/notifications.d.ts)",
+      "Bash(cat node_modules/@devvit/notifications/NotificationsClient.d.ts)",
+      "Bash(cat devvit.yaml)",
+      "Bash(find . -name \"devvit.yaml\" -not -path \"*/node_modules/*\")",
+      "Bash(xargs cat *)",
+      "Bash(xargs grep *)",
+      "Bash(node -e \"const {notifications} = require\\('./node_modules/@devvit/web/server'\\); console.log\\(typeof notifications, Object.getOwnPropertyNames\\(Object.getPrototypeOf\\(notifications\\)\\)\\)\")",
+      "Bash(node -e \"const d = require\\('@devvit/web'\\); console.log\\(Object.keys\\(d\\)\\)\")",
+      "WebSearch",
+      "WebFetch(domain:www.remotion.dev)",
+      "Bash(npx tsc *)",
+      "Bash(git commit *)"
+    ]
+  }
+}
